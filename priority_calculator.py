@@ -53,13 +53,13 @@ def expression_operator(op: Callable[[int, int], float], group: Operation) -> Op
         return group
 
 
-def get_left(group: Operation) -> Union[int, 'Operation']:
+def get_left_rigth(group: Operation) -> Union[int, 'Operation']:
     if isinstance(group.left, Operation):
         return group.left.right
     return group.left
 
 
-def set_left(group: Operation, attach: Union[int, 'Operation']) -> Operation:
+def set_left_right(group: Operation, attach: Union[int, 'Operation']) -> Operation:
     if isinstance(group.left, Operation):
         group.left.right = attach
     else:
@@ -72,9 +72,9 @@ def expression_numbers(num: int, group: Operation) -> Operation:
         group.left = num
         return group
     elif group.op is multiply or group.op is divide:
-        re_group = Operation(left = get_left(group), op = group.op, right = num, depth=group.depth)
-        group = set_left(group, re_group)
-        return Operation(left = group.left, depth=group.depth)
+        re_group = Operation(left = get_left_rigth(group), op = group.op, right = num)
+        group = set_left_right(group, re_group)
+        return Operation(left = group.left)
     else:
         group.right = num
         return Operation(left = group)
