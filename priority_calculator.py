@@ -6,19 +6,12 @@ from dataclasses import dataclass
 from typing import Union, Callable
 
 
-def import_test() -> None:
-    print('hello world')
-    print(add(1, 2))
-    print(subtract(2, 1))
-    print(multiply(2, 3))
-    print(divide(6, 2))
-
-
 @dataclass
 class Operation:
     left: Union[float, "Operation", None] = None
     op: Union[Callable[[int, int], float], None] = None
     right: Union[float, "Operation", None] = None
+    depth: int = 0
 
 
 operator_constants = {
@@ -50,57 +43,75 @@ bracket_constants = {
 }
 
 
-def expression_operator(op: Callable[[int, int], float], container: Operation) -> Operation:
-    if container.op is not None:
-        raise(f'연속된 연산자 에러: {get_key_by_operator_method(container.op)}, {get_key_by_operator_method(op)}')
-    elif container.left is None:
-        raise(f'대상이 없는 연산자')
+def expression_operator(op: Callable[[int, int], float], group: Operation) -> Operation:
+    if group.op is not None:
+        raise ValueError(f'Syntax error: two consecutive operators found: {get_key_by_operator_method(group.op)}, {get_key_by_operator_method(op)}')
+    elif group.left is None:
+        raise ValueError(f'An operator was found without a corresponding operand.')
     else:
-        container.op = op
-        return container
+        group.op = op
+        return group
 
 
-def get_left_rigth(container: Operation) -> Union[int, 'Operation']:
-    if isinstance(container.left, Operation):
-        return container.left.right
-    return container.left
+def get_left_rigth(group: Operation) -> Union[int, 'Operation']:
+    if isinstance(group.left, Operation):
+        return group.left.right
+    return group.left
 
 
-def set_left_right(container: Operation, attach: Union[int, 'Operation']) -> Operation:
-    if isinstance(container.left, Operation):
-        container.left.right = attach
+def set_left_right(group: Operation, attach: Union[int, 'Operation']) -> Operation:
+    if isinstance(group.left, Operation):
+        group.left.right = attach
     else:
-        container.left = attach
-    return container
+        group.left = attach
+    return group
 
 
-def expression_numbers(num: int, container: Operation) -> Operation:
-    if container.op is None:
-        container.left = num
-        return container
-    elif container.op is multiply or container.op is divide:
-        re_container = Operation(left = get_left_rigth(container), op = container.op, right = num)
-        container = set_left_right(container, re_container)
-        return Operation(left = container.left)
+def expression_numbers(num: int, group: Operation) -> Operation:
+    if group.op is None:
+        group.left = num
+        return group
+    elif group.op is multiply or group.op is divide:
+        re_group = Operation(left = get_left_rigth(group), op = group.op, right = num)
+        group = set_left_right(group, re_group)
+        return Operation(left = group.left)
     else:
-        container.right = num
-        return Operation(left = container)
+        group.right = num
+        return Operation(left = group)
 
 
-def expression_grouping(it: iter, container: Operation) -> Operation:
+def expression_grouping(it: iter, group: Operation) -> Operation:
     try:
-        reserve = container
+        reserve = group
+        depth = 0
         for e in it:
-            mod = e.strip().lower()
-            is_op = operator_constants.get(mod)
-            if is_op:
-                reserve = expression_grouping(it, expression_operator(is_op, container))
+            if e == '(':
+                depth += 1
+            elif e == ')':
+                depth -= 1
             else:
-                is_int = to_int(mod)
-                reserve = expression_grouping(it, expression_numbers(is_int, container))
+                is_op = operator_constants.get(e)
+                group.depth = depth
+                if is_op:
+                    reserve = expression_grouping(it, expression_operator(is_op, group))
+                else:
+                    is_int = to_int(e)
+                    reserve = expression_grouping(it, expression_numbers(is_int, group))
         return reserve
     except ValueError as e:
         raise e
+
+
+def calculate(group: Operation) -> float:
+    if isinstance(group.left, Operation):
+        left = calculate(group.left)
+    else:
+        left = group.left
+    if isinstance(group.right, Operation):
+        right = calculate(group.right)
+    else:
+        right = group.right
+    return group.op(int(left), int(right))
 
 
 def main():
@@ -108,13 +119,23 @@ def main():
     this is method docstring
     """
     try:
-        import_test()
-        array = [e for e in input('Enter Expression: ').split(' ') if e.strip()]
-        root = Operation()
-        expression = expression_grouping(iter(array), root)
-        print(expression)
+        array = [e for e in input('Enter Expression: ').split(' ') if e.strip().lower()]
+        if not len(array):
+            raise ValueError('Input Some Value...')
+        expression = expression_grouping(iter(array), Operation())
+        if not expression.op and not expression.right:
+            print(f'Result: {calculate(expression.left)}')
+        else:
+            if expression.op:
+                raise ValueError(f'An operator was found without a corresponding operand.')
+            print(expression)
+            raise ValueError('some thing Wrong...')
     except ValueError as e:
         print(e)
 
 if __name__ == '__main__':
     main()
+
+# ( 1 + 2 ) / ( 0 + ( 3 * ( 4 + 5 ) ) )
+# ( 1 ) + ( 2 )
+# 1 + 2 * 3
