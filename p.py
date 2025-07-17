@@ -20,29 +20,27 @@ class G:
 
 
 def set_op(g, op):
-    if not g.left:
-        raise ValueError('op need num')
+    if g.left is None:
+        raise ValueError(f'op need num: {g}')
     if g.op:
         raise ValueError('double op not allow')
     g.op = op
     return g
 
 
-def h_pri(g, num):
-    if isinstance(g.left, G):
-        if g.left.op in [multiply, divide] or g.left.block:
-            g.right = num
-        else:
-            g.right = G(left = g.left.right, op = g.op, right = num)
-            g.op = g.left.op
-            g.left = g.left.left
+def h_pri(g, num):    
+    if isinstance(g.left, G) and g.left.block is False:
+        g.right = G(left = g.left.right, op = g.op, right = num)
+        g.op = g.left.op
+        g.left = g.left.left
     else:
         g.right = num
+    g.block = True
     return G(left = g)
 
 
 def set_num(g, num):
-    if not g.left:
+    if g.left is None:
         g.left = num
     elif g.op in [multiply, divide]:
         g = h_pri(g, num)
@@ -59,7 +57,8 @@ def calc(it: iter, g: G):
         if i == '(':
             g = set_num(g, calc(it, G()))
         elif i == ')':
-            g.left.block = True
+            if isinstance(g.left, G):
+                g.left.block = True
             return g.left
         else:
             is_op = op_const.get(i)
@@ -74,7 +73,6 @@ def calc(it: iter, g: G):
 def result(g: G):
     left = result(g.left) if isinstance(g.left, G) else g.left
     right = result(g.right) if isinstance(g.right, G) else g.right
-    # print('at R', left, right, g.op(left, right))
     return g.op(left, right)
 
 
@@ -87,7 +85,7 @@ def main():
         if not len(array):
             raise ValueError('Input Some Value...')
         expression = calc(iter(array), G())
-        if not expression.op and not expression.right and expression.left:
+        if expression.op is None and expression.right is None and expression.left is not None:
             print(f'result: {result(expression.left)}')
         else:
             raise ValueError('not matched condition')
