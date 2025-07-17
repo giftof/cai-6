@@ -1,16 +1,16 @@
 from typing import Callable, TypedDict, Optional
 import math
 
-def add(a: int, b: int) -> float:
+def add(a, b) -> float:
     return float(a + b)
 
-def subtract(a: int, b: int) -> float:
+def subtract(a, b) -> float:
     return float(a - b)
 
-def multiply(a: int, b: int) -> float:
+def multiply(a, b) -> float:
     return float(a * b)
 
-def divide(a: int, b: int) -> float:
+def divide(a, b) -> float:
     if (b == 0):
         raise ValueError('Error: Division by zero.')
     return float(a / b)

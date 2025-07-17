@@ -55,13 +55,17 @@ def expression_operator(op: Callable[[int, int], float], group: Operation) -> Op
 
 def get_left(group: Operation) -> Union[int, 'Operation']:
     if isinstance(group.left, Operation):
-        return group.left.right
+        if group.left.op not in [multiply, divide]:
+            return group.left.right
     return group.left
 
 
 def set_left(group: Operation, attach: Union[int, 'Operation']) -> Operation:
     if isinstance(group.left, Operation):
-        group.left.right = attach
+        if group.left.op not in [multiply, divide]:
+            group.left.right = attach
+        else:
+            group.left = attach
     else:
         group.left = attach
     return group
